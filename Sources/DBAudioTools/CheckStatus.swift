@@ -7,7 +7,7 @@
 
 import Foundation
 
-func CheckStatus(_ status: OSStatus, or error: Error) throws {
+public func CheckStatus(_ status: OSStatus, or error: Error) throws {
     if status != noErr {
         debugPrint("💀 status=\(status)")
         throw error

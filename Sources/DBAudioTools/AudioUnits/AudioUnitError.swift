@@ -7,7 +7,7 @@
 
 import Foundation
 
-enum AudioUnitError: Error {
+public enum AudioUnitError: Error {
     case graphNotInitialized
     case createGraphError(OSStatus)
     case addGraphNodeError(OSStatus)

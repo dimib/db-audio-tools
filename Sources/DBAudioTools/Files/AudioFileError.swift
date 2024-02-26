@@ -7,7 +7,7 @@
 
 import Foundation
 
-enum AudioFileError: Error {
+public enum AudioFileError: Error {
     case getPropertyError(OSStatus)
     case closeError(OSStatus)
     case openError(OSStatus)

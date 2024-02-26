@@ -7,8 +7,14 @@
 
 import Foundation
 import AudioToolbox
+import AVFoundation
 
-final class AudioManager {
+public final class AudioManager {
+    
+    public enum Service {
+        case audioQueue
+        case audioUnit
+    }
     
     private let fileNames: [(String, String)] = [
         ("Q1a", "sonar-ping-95840"),
@@ -16,80 +22,93 @@ final class AudioManager {
         ("Q2", "ping-82822"),
         ("Q3", "little-bell-14606")
     ]
-    private var audioFileQueues: [String: FilePlaybackAudioQueue] = [:]
-    private var audioPlayers: [String: FilePlaybackAUPlayer] = [:]
+    private var audioQueues: [String: FilePlaybackAudioQueue] = [:]
+    private var audioUnits: [String: FilePlaybackAUPlayer] = [:]
 
     // MARK: - Lifecycle
-    init() {
-        setup()
+    public init() {
+        setupAudioSession(useSpeaker: true)
+    }
+
+    public func setupAudioSession(useSpeaker: Bool) {
+        #if os(iOS) || os(watchOS) || os(tvOS)
+        do {
+            let session = AVAudioSession.sharedInstance()
+            try session.setActive(true)
+            try session.setCategory(useSpeaker ? .playAndRecord : .playback)
+            try session.overrideOutputAudioPort(useSpeaker ? .speaker : .none)
+        } catch {
+            debugPrint("💿 could not setup audio session: \(error)")
+        }
+        #endif
     }
     
     // MARK: - Public methods
   
-    func playAudioFile(_ fileName: String) {
+    public func play(_ fileName: String, service: Service) {
         do {
-            guard let audioPlayer = audioPlayers[fileName] else { return }
-            try audioPlayer.start()
+            switch service {
+            case .audioUnit:
+                guard let audioPlayer = audioUnits[fileName] else { return }
+                try audioPlayer.start()
+            case .audioQueue:
+                guard let audioQueue = audioQueues[fileName] else { return }
+                try audioQueue.start()
+            }
         } catch {
             print("Error: \(error.localizedDescription)")
         }
-    }
-/*
-    func playAudioFile(_ fileName: String) {
-        do {
-            guard let audioQueue = audioFileQueues[fileName] else { return }
-            try audioQueue.start()
-        } catch {
-            print("Error: \(error.localizedDescription)")
-        }
-    }
-*/
-    func setup() {
-        registerAudioPlayers()
     }
 
-    func cleanup() {
-        for key in audioPlayers.keys {
-            try? audioPlayers[key]?.stop()
-            audioPlayers[key] = nil
+    public func setup(service: Service) {
+        switch service {
+        case .audioUnit: registerAudioUnitFiles()
+        case .audioQueue: registerAudioQueueFiles()
         }
     }
-/*
-    func cleanup() {
-        for key in audioFileQueues.keys {
-            try? audioFileQueues[key]?.stop()
-            audioFileQueues[key] = nil
+    
+    public func cleanup(service: Service) {
+        switch service {
+        case .audioUnit:
+            for key in audioUnits.keys {
+                try? audioUnits[key]?.stop()
+                audioUnits[key] = nil
+            }
+        case .audioQueue:
+            for key in audioQueues.keys {
+                try? audioQueues[key]?.stop()
+                audioQueues[key] = nil
+            }
         }
     }
-*/
-    private func registerAudioPlayers() {
+
+    private func registerAudioUnitFiles() {
         for resource in fileNames {
             do {
                 if let path = Bundle.main.path(forResource: (resource.1), ofType: "mp3") {
                     let audioFile = try AudioFile(path: path)
                     let audioPlayer = FilePlaybackAUPlayer(with: audioFile)
                     try audioPlayer.createPlayer()
-                    audioPlayers[resource.0] = audioPlayer
+                    audioUnits[resource.0] = audioPlayer
                 }
             } catch {
                 print("Error: \(error.localizedDescription)")
             }
         }
     }
-/*
-    private func registerAudioFiles() {
+
+    private func registerAudioQueueFiles() {
         for resource in fileNames {
             do {
                 if let path = Bundle.main.path(forResource: (resource.1), ofType: "mp3") {
                     let audioFile = try AudioFile(path: path)
                     let audioQueue = FilePlaybackAudioQueue(with: audioFile)
                     try audioQueue.createQueue()
-                    audioFileQueues[resource.0] = audioQueue
+                    audioQueues[resource.0] = audioQueue
                 }
             } catch {
                 print("Error: \(error.localizedDescription)")
             }
         }
     }
- */
 }

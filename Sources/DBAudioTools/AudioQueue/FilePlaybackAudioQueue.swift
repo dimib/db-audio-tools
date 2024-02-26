@@ -65,12 +65,12 @@ final class FilePlaybackAudioQueue {
         if let audioQueueTapRef {
             AudioQueueProcessingTapDispose(audioQueueTapRef)
         }
-        try? self.inputFile.close()
+        inputFile.close()
     }
     
     /// Create the audio queue from the specified `AudioFile`.
     /// - throws when creating the audio queue is not possible
-    func createQueue() throws {
+    public func createQueue() throws {
         guard let audioFileId = inputFile.id, var format = inputFile.fileFormat else {
             throw AudioQueueError.noAudioFile
         }
@@ -116,7 +116,7 @@ final class FilePlaybackAudioQueue {
     }
     
     /// Starts the audio playback from the beginning. A running audio queue will be stopped and the playback data will be reset.
-    func start() throws {
+    public func start() throws {
         guard let audioQueueRef, var playbackData = self.playbackData else { throw AudioQueueError.audioQueueNotInitialized }
         AudioQueueStop(audioQueueRef, true)
         playbackData.packetPosition = 0
@@ -132,7 +132,7 @@ final class FilePlaybackAudioQueue {
     }
     
     /// Stops the audio queue immediately and resets the playback data to the initial position.
-    func stop() throws {
+    public func stop() throws {
         guard let audioQueueRef, let playbackData else { throw AudioQueueError.audioQueueNotInitialized }
         AudioQueueStop(audioQueueRef, true)
         playbackData.packetPosition = 0
@@ -140,7 +140,7 @@ final class FilePlaybackAudioQueue {
     }
 
     /// Resets the audio queue immediately and resets the playback data to the initial position.
-    func reset() throws {
+    public func reset() throws {
         guard let audioQueueRef, let playbackData else { throw AudioQueueError.audioQueueNotInitialized }
         AudioQueueReset(audioQueueRef)
         playbackData.packetPosition = 0

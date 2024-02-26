@@ -8,7 +8,7 @@
 import Foundation
 import AudioToolbox
 
-struct AudioFile {
+public struct AudioFile {
     let id: AudioFileID?
     let path: String
     
@@ -31,12 +31,12 @@ struct AudioFile {
    
     // MARK: - Lifecycle
 
-    init(id: AudioFileID, path: String) throws {
+    public init(id: AudioFileID, path: String) throws {
         self.id = id
         self.path = path
     }
     
-    init(path: String) throws {
+    public init(path: String) throws {
         self.path = path
         self.id = try AudioFile.open(path: path)
     }

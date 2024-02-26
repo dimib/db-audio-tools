@@ -7,7 +7,7 @@
 
 import Foundation
 
-enum AudioQueueError: Error {
+public enum AudioQueueError: Error {
     case audioQueueNotInitialized
     case noAudioFile
     case getPropertyError(OSStatus)

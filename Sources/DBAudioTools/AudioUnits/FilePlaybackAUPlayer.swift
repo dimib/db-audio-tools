@@ -11,7 +11,7 @@ import Foundation
 import AudioToolbox
 
 /// Simple file player using AudioUnits
-final class FilePlaybackAUPlayer {
+public final class FilePlaybackAUPlayer {
     
     // MARK: - Types
     
@@ -25,7 +25,7 @@ final class FilePlaybackAUPlayer {
     private var defaultOutputNode: AUNode = 0
     
     // MARK: - Lifecycle
-    init(with inputFile: AudioFile) {
+    public init(with inputFile: AudioFile) {
         self.inputFile = inputFile
     }
     
@@ -41,12 +41,12 @@ final class FilePlaybackAUPlayer {
     }
     
     // MARK: - Player creation
-    func createPlayer() throws {
+    public func createPlayer() throws {
         try createGraph()
         try prepareFileInputUnit()
     }
     
-    func start() throws {
+    public func start() throws {
         guard let graph else { throw AudioUnitError.graphNotInitialized }
         
         AUGraphStop(graph)
@@ -56,7 +56,7 @@ final class FilePlaybackAUPlayer {
         try CheckStatus(status, or: AudioUnitError.graphStartError(status))
     }
     
-    func stop() throws {
+    public func stop() throws {
         guard let graph else { throw AudioUnitError.graphNotInitialized }
         let status = AUGraphStop(graph)
         try CheckStatus(status, or: AudioUnitError.graphStopError(status))
@@ -90,8 +90,13 @@ final class FilePlaybackAUPlayer {
     }
     
     private func addOutputNode(graph: AUGraph) throws {
+        #if os(macOS)
+        let outputSubType = kAudioUnitSubType_DefaultOutput
+        #else
+        let outputSubType = kAudioUnitSubType_VoiceProcessingIO
+        #endif
         var description = AudioComponentDescription(componentType: kAudioUnitType_Output,
-                                                    componentSubType: kAudioUnitSubType_DefaultOutput,
+                                                    componentSubType: outputSubType,
                                                     componentManufacturer: kAudioUnitManufacturer_Apple,
                                                     componentFlags: 0, componentFlagsMask: 0)
         let status = AUGraphAddNode(graph, &description, &defaultOutputNode)
