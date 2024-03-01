@@ -47,15 +47,17 @@ public struct AudioFile {
         guard let audioFileId = id else { throw AudioQueueError.noAudioFile }
         let audioStreamDescription = try AudioFile.getFormat(from: audioFileId)
         var packetSizeUpperBound: UInt32 = 0
-        var packetSizeUpperBoundSize: UInt32 = UInt32(MemoryLayout<UInt32>.size)
+        var packetSizeUpperBoundSize: UInt32 = UInt32.size32
         
         var estimatedDurationInSeconds: Float64 = 0
-        var estimatedDurationInSecondsSize: UInt32 = UInt32(MemoryLayout<Float64>.size)
-        let durationStatus = AudioFileGetProperty(audioFileId, kAudioFilePropertyEstimatedDuration, &estimatedDurationInSecondsSize, &estimatedDurationInSeconds)
-        guard durationStatus == noErr else { throw AudioFileError.getPropertyError(durationStatus) }
+        var estimatedDurationInSecondsSize: UInt32 = Float64.size32
+        try WithCheck(AudioFileGetProperty(audioFileId, kAudioFilePropertyEstimatedDuration, &estimatedDurationInSecondsSize, &estimatedDurationInSeconds)) {
+            AudioFileError.getPropertyError($0)
+        }
 
-        let status = AudioFileGetProperty(audioFileId, kAudioFilePropertyPacketSizeUpperBound, &packetSizeUpperBoundSize, &packetSizeUpperBound)
-        guard status == noErr else { throw AudioFileError.getPropertyError(status) }
+        try WithCheck(AudioFileGetProperty(audioFileId, kAudioFilePropertyPacketSizeUpperBound, &packetSizeUpperBoundSize, &packetSizeUpperBound)) {
+            AudioFileError.getPropertyError($0)
+        }
         let maxBufferSize: UInt32 = 0x100000
         let minBufferSize: UInt32 = 0x4000
         
@@ -83,40 +85,35 @@ public struct AudioFile {
     // MARK: - Static functions
     static func open(path: String) throws -> AudioFileID {
         var id: AudioFileID?
-        let status = AudioFileOpenURL(URL(fileURLWithPath: path) as CFURL, .readPermission, 0, &id)
-        try CheckStatus(status, or: AudioFileError.openError(status))
+        try WithCheck(AudioFileOpenURL(URL(fileURLWithPath: path) as CFURL, .readPermission, 0, &id)) { AudioFileError.openError($0) }
         return id!
     }
     
     static func getFileType(from id: AudioFileID) throws -> AudioFileTypeID {
         var fileType: AudioFileTypeID = 0
-        var size = UInt32(MemoryLayout<AudioFileTypeID>.size)
-        let status = AudioFileGetProperty(id, kAudioFilePropertyFileFormat, &size, &fileType)
-        try CheckStatus(status, or: AudioFileError.getPropertyError(status))
+        var size = AudioFileTypeID.size32
+        try WithCheck(AudioFileGetProperty(id, kAudioFilePropertyFileFormat, &size, &fileType)) { AudioFileError.getPropertyError($0) }
         return fileType
     }
     
     static func getFileSize(from id: AudioFileID) throws -> UInt64 {
         var size: UInt64 = 0
-        var sizeSize = UInt32(MemoryLayout<UInt64>.size)
-        let status = AudioFileGetProperty(id, kAudioFilePropertyAudioDataByteCount, &sizeSize, &size)
-        try CheckStatus(status, or: AudioFileError.getPropertyError(status))
+        var sizeSize = UInt64.size32
+        try WithCheck(AudioFileGetProperty(id, kAudioFilePropertyAudioDataByteCount, &sizeSize, &size)) { AudioFileError.getPropertyError($0) }
         return size
     }
     
     static func getFormat(from id: AudioFileID) throws -> AudioStreamBasicDescription {
         var format = AudioStreamBasicDescription()
-        var size = UInt32(MemoryLayout<AudioStreamBasicDescription>.size)
-        let status = AudioFileGetProperty(id, kAudioFilePropertyDataFormat, &size, &format)
-        try CheckStatus(status, or: AudioFileError.getPropertyError(status))
+        var size = AudioStreamBasicDescription.size32
+        try WithCheck(AudioFileGetProperty(id, kAudioFilePropertyDataFormat, &size, &format)) { AudioFileError.getPropertyError($0) }
         return format
     }
     
     static func getNumberOfPackets(from id: AudioFileID) throws -> UInt64 {
         var packets: UInt64 = 0
-        var size = UInt32(MemoryLayout<UInt64>.size) // TODO: Use AudioFileGetPropertyInfo for size?
-        let status = AudioFileGetProperty(id, kAudioFilePropertyAudioDataPacketCount, &size, &packets)
-        try CheckStatus(status, or: AudioFileError.getPropertyError(status))
+        var size = UInt64.size32 // TODO: Use AudioFileGetPropertyInfo for size?
+        try WithCheck(AudioFileGetProperty(id, kAudioFilePropertyAudioDataPacketCount, &size, &packets)) { AudioFileError.getPropertyError($0) }
         return packets
     }
     

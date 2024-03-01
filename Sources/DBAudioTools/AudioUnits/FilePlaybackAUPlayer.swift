@@ -30,7 +30,7 @@ public final class FilePlaybackAUPlayer {
     }
     
     deinit {
-        debugPrint("💿 deinit")
+        debugPrint("🎹 deinit")
         if let graph {
             AUGraphStop(graph)
             AUGraphUninitialize(graph);
@@ -53,29 +53,25 @@ public final class FilePlaybackAUPlayer {
         try prepareFileInputUnit()
 
         let status = AUGraphStart(graph)
-        try CheckStatus(status, or: AudioUnitError.graphStartError(status))
+        try WithCheck(AUGraphStart(graph)) { AudioUnitError.graphStartError($0) }
     }
     
     public func stop() throws {
         guard let graph else { throw AudioUnitError.graphNotInitialized }
-        let status = AUGraphStop(graph)
-        try CheckStatus(status, or: AudioUnitError.graphStopError(status))
+        try WithCheck(AUGraphStop(graph)) { AudioUnitError.graphStopError($0) }
     }
     
     // MARK: - Private functions
     
     private func createGraph() throws {
-        let status = NewAUGraph(&graph)
-        try CheckStatus(status, or: AudioUnitError.createGraphError(status))
+        try WithCheck(NewAUGraph(&graph)) { AudioUnitError.createGraphError($0) }
         guard let graph else { return }
         try addGeneratorNode(graph: graph)
         try addOutputNode(graph: graph)
         try connectNodes(graph: graph, node1: filePlayerNode, node2: defaultOutputNode)
         
-        let openStatus = AUGraphOpen(graph)
-        try CheckStatus(openStatus, or: AudioUnitError.graphOpenError(status))
-        let initializeStatus = AUGraphInitialize(graph)
-        try CheckStatus(initializeStatus, or: AudioUnitError.graphInitializeError(status))
+        try WithCheck(AUGraphOpen(graph)) { AudioUnitError.graphOpenError($0) }
+        try WithCheck(AUGraphInitialize(graph)) { AudioUnitError.graphInitializeError($0) }
     }
     
     // MARK: - Adding nodes
@@ -85,8 +81,7 @@ public final class FilePlaybackAUPlayer {
                                                     componentSubType: kAudioUnitSubType_AudioFilePlayer,
                                                     componentManufacturer: kAudioUnitManufacturer_Apple,
                                                     componentFlags: 0, componentFlagsMask: 0)
-        let status = AUGraphAddNode(graph, &description, &filePlayerNode)
-        try CheckStatus(status, or: AudioUnitError.addGraphNodeError(status))
+        try WithCheck(AUGraphAddNode(graph, &description, &filePlayerNode)) { AudioUnitError.addGraphNodeError($0) }
     }
     
     private func addOutputNode(graph: AUGraph) throws {
@@ -99,15 +94,13 @@ public final class FilePlaybackAUPlayer {
                                                     componentSubType: outputSubType,
                                                     componentManufacturer: kAudioUnitManufacturer_Apple,
                                                     componentFlags: 0, componentFlagsMask: 0)
-        let status = AUGraphAddNode(graph, &description, &defaultOutputNode)
-        try CheckStatus(status, or: AudioUnitError.addGraphNodeError(status))
+        try WithCheck(AUGraphAddNode(graph, &description, &defaultOutputNode)) { AudioUnitError.addGraphNodeError($0) }
     }
     
     // MARK: - Connecting nodes
 
     private func connectNodes(graph: AUGraph, node1: AUNode, node2: AUNode) throws {
-        let status = AUGraphConnectNodeInput(graph, node1, 0, node2, 0)
-        try CheckStatus(status, or:  AudioUnitError.connectNodesError(status))
+        try WithCheck(AUGraphConnectNodeInput(graph, node1, 0, node2, 0)) { AudioUnitError.connectNodesError($0) }
     }
     
     // MARK: - Prepare file input unit
@@ -116,13 +109,11 @@ public final class FilePlaybackAUPlayer {
             throw AudioUnitError.graphNotInitialized
         }
         var fileAudioUnit: AudioUnit?
-        let status = AUGraphNodeInfo(graph, filePlayerNode, nil, &fileAudioUnit)
-        try CheckStatus(status, or: AudioUnitError.audioUnitNotFound(status))
+        try WithCheck(AUGraphNodeInfo(graph, filePlayerNode, nil, &fileAudioUnit)) { AudioUnitError.audioUnitNotFound($0) }
         guard let fileAudioUnit, var audioId = inputFile.id else { return }
     
-        let setPropStatus = AudioUnitSetProperty(fileAudioUnit, kAudioUnitProperty_ScheduledFileIDs, kAudioUnitScope_Global, 0,
-                                                 &audioId, UInt32(MemoryLayout<AudioFileID>.size))
-        try CheckStatus(setPropStatus, or: AudioUnitError.setPropertyError(status))
+        try WithCheck(AudioUnitSetProperty(fileAudioUnit, kAudioUnitProperty_ScheduledFileIDs, kAudioUnitScope_Global, 0,
+                                           &audioId, AudioFileID.size32)) { AudioUnitError.setPropertyError($0) }
         
         // Set Region to play
         let framesToPlay = UInt32(inputFile.numberOfPackets) * format.mFramesPerPacket
@@ -130,20 +121,17 @@ public final class FilePlaybackAUPlayer {
                                              mFlags: .sampleTimeValid, mReserved: 0)
         var region = ScheduledAudioFileRegion(mTimeStamp: regionTimeStamp, mCompletionProc: nil, mCompletionProcUserData: nil, mAudioFile: audioFile,
                                               mLoopCount: 0, mStartFrame: 0, mFramesToPlay: framesToPlay)
-        let setProp2Status = AudioUnitSetProperty(fileAudioUnit, kAudioUnitProperty_ScheduledFileRegion, kAudioUnitScope_Global, 0,
-                                                  &region, UInt32(MemoryLayout<ScheduledAudioFileRegion>.size))
-        try CheckStatus(setProp2Status, or: AudioUnitError.setPropertyError(status))
+        try WithCheck(AudioUnitSetProperty(fileAudioUnit, kAudioUnitProperty_ScheduledFileRegion, kAudioUnitScope_Global, 0,
+                                           &region, ScheduledAudioFileRegion.size32)) { AudioUnitError.setPropertyError($0) }
         
         // Set sample start timestamp
         var startTimeStamp = AudioTimeStamp(mSampleTime: -1, mHostTime: 0, mRateScalar: 0, mWordClockTime: 0, mSMPTETime: SMPTETime(),
                                             mFlags: .sampleTimeValid, mReserved: 0)
-        let setProp3Status = AudioUnitSetProperty(fileAudioUnit, kAudioUnitProperty_ScheduleStartTimeStamp, kAudioUnitScope_Global, 0,
-                                                  &startTimeStamp, UInt32(MemoryLayout<AudioTimeStamp>.size))
-        try CheckStatus(setProp3Status, or: AudioUnitError.setPropertyError(status))
+        try WithCheck(AudioUnitSetProperty(fileAudioUnit, kAudioUnitProperty_ScheduleStartTimeStamp, kAudioUnitScope_Global, 0,
+                                           &startTimeStamp, AudioTimeStamp.size32)) { AudioUnitError.setPropertyError($0) }
         
         let estimatedDuration = (try? inputFile.calculateBytesForTime().estimatedDuration) ?? 0
         let durationInSeconds = region.mFramesToPlay / UInt32(format.mSampleRate)
-        debugPrint("💿 just for info: estimated=\(estimatedDuration) duration=\(durationInSeconds)")
+        debugPrint("🎹 just for info: estimated=\(estimatedDuration) duration=\(durationInSeconds)")
     }
-    
 }

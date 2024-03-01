@@ -24,11 +24,15 @@ public final class AudioManager {
     ]
     private var audioQueues: [String: FilePlaybackAudioQueue] = [:]
     private var audioUnits: [String: FilePlaybackAUPlayer] = [:]
+    
+    private var sequencer: (Sequencer & SequencerControl)?
 
     // MARK: - Lifecycle
     public init() {
         setupAudioSession(useSpeaker: true)
     }
+
+    // MARK: - Setup
 
     public func setupAudioSession(useSpeaker: Bool) {
         #if os(iOS) || os(watchOS) || os(tvOS)
@@ -42,8 +46,15 @@ public final class AudioManager {
         }
         #endif
     }
+
+    public func setup(service: Service) {
+        switch service {
+        case .audioUnit: registerAudioUnitFiles()
+        case .audioQueue: registerAudioQueueFiles()
+        }
+    }
     
-    // MARK: - Public methods
+    // MARK: - Audio player
   
     public func play(_ fileName: String, service: Service) {
         do {
@@ -60,13 +71,6 @@ public final class AudioManager {
         }
     }
 
-    public func setup(service: Service) {
-        switch service {
-        case .audioUnit: registerAudioUnitFiles()
-        case .audioQueue: registerAudioQueueFiles()
-        }
-    }
-    
     public func cleanup(service: Service) {
         switch service {
         case .audioUnit:
@@ -81,6 +85,40 @@ public final class AudioManager {
             }
         }
     }
+    
+    // MARK: - Sequencer
+    public func setupSequencer(delegate: SequencerDelegate?) {
+        do {
+            let sequencer = MusicPlayerSequencer(beatsPerMinute: 0, sequencerTiming: .fourFour)
+            sequencer.delegate = delegate
+            try sequencer.setup()
+            self.sequencer = sequencer
+        } catch {
+            print("Error: \(error.localizedDescription)")
+        }
+    }
+    
+    public func cleanupSequencer() {
+        sequencer = nil // Should deinit..
+    }
+    
+    public func startSequencer() {
+        do {
+            try sequencer?.start()
+        } catch {
+            print("Error: \(error.localizedDescription)")
+        }
+    }
+
+    public func stopSequencer() {
+        do {
+            try sequencer?.stop()
+        } catch {
+            print("Error: \(error.localizedDescription)")
+        }
+    }
+
+    // MARK: - Private methods
 
     private func registerAudioUnitFiles() {
         for resource in fileNames {

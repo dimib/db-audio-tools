@@ -54,7 +54,7 @@ final class FilePlaybackAudioQueue {
     }
     
     deinit {
-        debugPrint("💿 deinit")
+        debugPrint("🎹 deinit")
         if let audioQueueRef {
             for i in 0..<numberOfBuffers {
                 AudioQueueFreeBuffer(audioQueueRef, buffers[i]!)
@@ -74,9 +74,11 @@ final class FilePlaybackAudioQueue {
         guard let audioFileId = inputFile.id, var format = inputFile.fileFormat else {
             throw AudioQueueError.noAudioFile
         }
-        debugPrint("💿 format \(format)")
-        let status = AudioQueueNewOutput(&format, self.audioQueueOutputCallback, nil, nil, nil, 0, &audioQueueRef)
-        guard status == noErr, let audioQueueRef  else { throw AudioQueueError.creationError(status) }
+        debugPrint("🎹 format \(format)")
+        try WithCheck(AudioQueueNewOutput(&format, self.audioQueueOutputCallback, nil, nil, nil, 0, &audioQueueRef)) {
+            AudioQueueError.creationError($0)
+        }
+        guard let audioQueueRef else { throw AudioQueueError.audioQueueError }
         
         try copyEncoderMagicToAudioQueue()
         let bytesForTime = try inputFile.calculateBytesForTime()
@@ -106,7 +108,9 @@ final class FilePlaybackAudioQueue {
         let flags = AudioQueueProcessingTapFlags.postEffects
         
         let status = AudioQueueProcessingTapNew(audioQueueRef, self.processingTapCallback, &tapContext, flags, &maxFrames, &format, &tapRef)
-        try CheckStatus(status, or: AudioQueueError.tapProcessingError(status))
+        try WithCheck(AudioQueueProcessingTapNew(audioQueueRef, self.processingTapCallback, &tapContext, flags, &maxFrames, &format, &tapRef)) {
+            AudioQueueError.tapProcessingError($0)
+        }
         self.audioQueueTapRef = tapRef
     }
     
@@ -128,7 +132,9 @@ final class FilePlaybackAudioQueue {
                 }
             }
         }
-        AudioQueueStart(audioQueueRef, nil)
+        try WithCheck(AudioQueueStart(audioQueueRef, nil)) {
+            AudioQueueError.startError($0)
+        }
     }
     
     /// Stops the audio queue immediately and resets the playback data to the initial position.
@@ -172,7 +178,7 @@ final class FilePlaybackAudioQueue {
     ///
     private var audioQueueOutputCallback: AudioQueueOutputCallback = { (inUserData, audioQueueRef, audioQueueBufferRef) in
         guard var playbackData = inUserData?.assumingMemoryBound(to: AudioQueuePlaybackData.self).pointee else { return }
-        debugPrint("💿 callback: \(playbackData.packetPosition)")
+        debugPrint("🎹 callback: \(playbackData.packetPosition)")
         guard !playbackData.isDone else { return }
         var numBytes = playbackData.numberOfBytesToRead
         var numPackets = playbackData.numberOfPacketsToRead
@@ -196,11 +202,11 @@ final class FilePlaybackAudioQueue {
         var sampleTime: Float64 = 0
         var frameCount: UInt32 = 0
         
-        AudioQueueProcessingTapGetSourceAudio(inAQTap, inNumberFrames, ioTimeStamp, ioFlags, outNumberFrames, ioData);
+        AudioQueueProcessingTapGetSourceAudio(inAQTap, inNumberFrames, ioTimeStamp, ioFlags, outNumberFrames, ioData)
         AudioQueueProcessingTapGetQueueTime(inAQTap, &sampleTime, &frameCount)
-        debugPrint("💿 processingTapCallback: duration=\(tapContext.durationSampleTime) sampleTime=\(sampleTime) frameCount=\(frameCount)")
+        debugPrint("🎹 processingTapCallback: duration=\(tapContext.durationSampleTime) sampleTime=\(sampleTime) frameCount=\(frameCount)")
         if sampleTime > tapContext.durationSampleTime {
-            debugPrint("💿 ende?")
+            debugPrint("🎹 ende?")
         }
     }
 }

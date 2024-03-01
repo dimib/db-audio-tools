@@ -14,4 +14,6 @@ public enum AudioQueueError: Error {
     case creationError(OSStatus)
     case noMagicCookie(OSStatus)
     case tapProcessingError(OSStatus)
+    case audioQueueError
+    case startError(OSStatus)
 }
