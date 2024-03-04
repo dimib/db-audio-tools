@@ -11,6 +11,8 @@ public enum SequencerError: Error {
     case notInitialized
     case musicPlayerCreationFailed(OSStatus)
     case musicSequenceCreationFailed(OSStatus)
+    case midiClientCreationFailed(OSStatus)
+    case midiDestinationCreationFailed(OSStatus)
     case musicSequenceSetCallbackFailed(OSStatus)
     case musicTrackCreationFailed(OSStatus)
     case getTrackError(OSStatus)
@@ -21,4 +23,5 @@ public enum SequencerError: Error {
     case startStopError(OSStatus)
     case setPropertyError(OSStatus)
     case loadMidiError(OSStatus)
+    case sequenceTimeError(OSStatus)
 }
