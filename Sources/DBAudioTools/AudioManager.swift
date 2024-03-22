@@ -39,8 +39,9 @@ public final class AudioManager {
         do {
             let session = AVAudioSession.sharedInstance()
             try session.setActive(true)
-            try session.setCategory(useSpeaker ? .playAndRecord : .playback)
+            try session.setCategory(useSpeaker ? .soloAmbient : .playback)
             try session.overrideOutputAudioPort(useSpeaker ? .speaker : .none)
+            try session.setActive(true)
         } catch {
             debugPrint("💿 could not setup audio session: \(error)")
         }
@@ -127,6 +128,8 @@ public final class AudioManager {
                     let audioFile = try AudioFile(path: path)
                     let audioPlayer = FilePlaybackAUPlayer(with: audioFile)
                     try audioPlayer.createPlayer()
+                    debugPrint("🔊 volume: \(audioPlayer.outputVolume)")
+                    audioPlayer.outputVolume = 10
                     audioUnits[resource.0] = audioPlayer
                 }
             } catch {

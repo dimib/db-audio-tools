@@ -41,6 +41,11 @@ public struct AudioFile {
         self.id = try AudioFile.open(path: path)
     }
     
+    public init(url: URL) throws {
+        self.path = url.path(percentEncoded: false)
+        self.id = try AudioFile.open(url: url)
+    }
+    
     // MARK: - Public functionss
 
     func calculateBytesForTime() throws -> (packetsToRead: UInt32, bytesToRead: UInt32, estimatedDuration: Float64) {
@@ -83,9 +88,16 @@ public struct AudioFile {
     }
 
     // MARK: - Static functions
+
     static func open(path: String) throws -> AudioFileID {
         var id: AudioFileID?
         try WithCheck(AudioFileOpenURL(URL(fileURLWithPath: path) as CFURL, .readPermission, 0, &id)) { AudioFileError.openError($0) }
+        return id!
+    }
+    
+    static func open(url: URL) throws -> AudioFileID {
+        var id: AudioFileID?
+        try WithCheck(AudioFileOpenURL(url as CFURL, .readPermission, 0, &id)) { AudioFileError.openError($0) }
         return id!
     }
     

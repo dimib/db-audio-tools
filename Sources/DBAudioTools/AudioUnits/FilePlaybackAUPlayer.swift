@@ -9,6 +9,7 @@
 
 import Foundation
 import AudioToolbox
+import CoreAudio
 
 /// Simple file player using AudioUnits
 public final class FilePlaybackAUPlayer {
@@ -61,6 +62,29 @@ public final class FilePlaybackAUPlayer {
         try WithCheck(AUGraphStop(graph)) { AudioUnitError.graphStopError($0) }
     }
     
+    // MARK: - Output volume
+    
+    // https://stackoverflow.com/questions/3094691/setting-volume-on-audio-unit-kaudiounitsubtype-remoteio
+    public var outputVolume: Float {
+        get {
+            do {
+                guard let outputUnit = getAudioUnit(of: kAudioUnitType_Output) else { throw AudioUnitError.graphNotInitialized }
+                var volume: Float = 0
+                try WithCheck(AudioUnitGetParameter(outputUnit, kHALOutputParam_Volume, kAudioUnitScope_Output, 0, &volume)) { AudioUnitError.setVolumeError($0) }
+                return volume
+            } catch {
+                return 0
+            }
+        }
+        set {
+            do {
+                guard let outputUnit = getAudioUnit(of: kAudioUnitType_Output) else { throw AudioUnitError.graphNotInitialized }
+                try WithCheck(AudioUnitSetParameter(outputUnit, kHALOutputParam_Volume, kAudioUnitScope_Output, 0, newValue, 0)) { AudioUnitError.setVolumeError($0) }
+            } catch {
+            }
+        }
+    }
+
     // MARK: - Private functions
     
     private func createGraph() throws {
@@ -88,13 +112,37 @@ public final class FilePlaybackAUPlayer {
         #if os(macOS)
         let outputSubType = kAudioUnitSubType_DefaultOutput
         #else
-        let outputSubType = kAudioUnitSubType_VoiceProcessingIO
+    // https://stackoverflow.com/questions/40257923/how-to-play-a-signal-with-audiounit-ios
+        let outputSubType = kAudioUnitSubType_RemoteIO // kAudioUnitSubType_VoiceProcessingIO
         #endif
         var description = AudioComponentDescription(componentType: kAudioUnitType_Output,
                                                     componentSubType: outputSubType,
                                                     componentManufacturer: kAudioUnitManufacturer_Apple,
                                                     componentFlags: 0, componentFlagsMask: 0)
         try WithCheck(AUGraphAddNode(graph, &description, &defaultOutputNode)) { AudioUnitError.addGraphNodeError($0) }
+        
+    }
+    
+    // MARK: - Finding nodes
+    private func getAudioUnit(of type: OSType) -> AudioUnit? {
+        guard let graph else { return nil }
+
+        var numberOfNodes: UInt32 = 0
+        AUGraphGetNodeCount(graph, &numberOfNodes)
+        
+        for index in 0..<numberOfNodes {
+            var node: AUNode = AUNode()
+            AUGraphGetIndNode(graph, index, &node)
+            
+            var description = AudioComponentDescription()
+            var audioUnit: AudioUnit?
+            AUGraphNodeInfo(graph, node, &description, &audioUnit)
+            
+            if description.componentType == type {
+                return audioUnit
+            }
+        }
+        return nil
     }
     
     // MARK: - Connecting nodes
@@ -133,5 +181,15 @@ public final class FilePlaybackAUPlayer {
         let estimatedDuration = (try? inputFile.calculateBytesForTime().estimatedDuration) ?? 0
         let durationInSeconds = region.mFramesToPlay / UInt32(format.mSampleRate)
         debugPrint("🎹 just for info: estimated=\(estimatedDuration) duration=\(durationInSeconds)")
+    }
+    
+    private func prepareOutputUnit() throws {
+        guard let graph else {
+            throw AudioUnitError.graphNotInitialized
+        }
+
+        var outputUnit: AudioUnit?
+        try WithCheck(AUGraphNodeInfo(graph, defaultOutputNode, nil, &outputUnit)) { AudioUnitError.audioUnitNotFound($0) }
+        
     }
 }

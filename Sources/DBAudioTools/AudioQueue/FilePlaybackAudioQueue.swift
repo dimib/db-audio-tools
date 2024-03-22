@@ -12,13 +12,13 @@ import AudioToolbox
 import Combine
 
 
-protocol FilePlaybackAudioQueueDelegate: AnyObject {
+public protocol FilePlaybackAudioQueueDelegate: AnyObject {
     func filePlaybackAudioQueue(_ audioQueue: FilePlaybackAudioQueue, didStartPlaying audioFile: AudioFile)
     func filePlaybackAudioQueue(_ audioQueue: FilePlaybackAudioQueue, didStopPlaying audioFile: AudioFile)
     func filePlaybackAudioQueue(_ audioQueue: FilePlaybackAudioQueue, didFailPlaying audioFile: AudioFile, error: Error)
 }
 
-extension FilePlaybackAudioQueueDelegate {
+public extension FilePlaybackAudioQueueDelegate {
     func filePlaybackAudioQueue(_ audioQueue: FilePlaybackAudioQueue, didStartPlaying audioFile: AudioFile) {}
     func filePlaybackAudioQueue(_ audioQueue: FilePlaybackAudioQueue, didStopPlaying audioFile: AudioFile) {}
     func filePlaybackAudioQueue(_ audioQueue: FilePlaybackAudioQueue, didFailPlaying audioFile: AudioFile, error: Error) {}
@@ -28,7 +28,7 @@ extension FilePlaybackAudioQueueDelegate {
 /// an output queue. The `FilePlaybackAudioQueue` must be initialized with
 /// a filename / file path that contains the data to be played. The file will remain open
 /// as long as the `FilePlaybackAudioQueue` exists.
-final class FilePlaybackAudioQueue {
+public final class FilePlaybackAudioQueue {
     
     // MARK: - Constants
     private let numberOfBuffers = 3
@@ -49,7 +49,7 @@ final class FilePlaybackAudioQueue {
     weak var delegate: FilePlaybackAudioQueueDelegate?
 
     // MARK: Lifecycle
-    init(with inputFile: AudioFile) {
+    public init(with inputFile: AudioFile) {
         self.inputFile = inputFile
     }
     
