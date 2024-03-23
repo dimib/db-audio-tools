@@ -63,3 +63,10 @@ public protocol IntermediateUnit: CompositionUnit {
     /// Return `nil`, if there is no next unit.
     var nextUnit: CompositionUnit? { get }
 }
+
+// MARK: - Effects Unit
+
+/// An `EffectUnit` is an `IntermediateUnit` that applies an effect to the audio data.
+public protocol EffectUnit: IntermediateUnit {
+    
+}

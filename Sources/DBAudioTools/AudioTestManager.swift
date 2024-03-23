@@ -172,11 +172,13 @@ public final class AudioTestManager {
             do {
                 if let path = Bundle.main.path(forResource: (resource.1), ofType: nil) {
                     let audioFile = try AudioFile(path: path)
-                    let inputUnit = FileInputUnit(inputFile: audioFile)
                     let outputUnit = GeneralOutputUnit()
-                    inputUnit.nextUnit = outputUnit
+                    let delayUnit = DelayEffectUnit()
+                    delayUnit.nextUnit = outputUnit
+                    let inputUnit = FileInputUnit(inputFile: audioFile)
+                    inputUnit.nextUnit = delayUnit
                     
-                    let composition = Composition(units: [inputUnit, outputUnit])
+                    let composition = Composition(units: [inputUnit, delayUnit, outputUnit])
                     try composition.create()
                     compositions[resource.0] = composition}
             }
