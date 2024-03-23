@@ -18,6 +18,6 @@ public enum AudioUnitError: Error {
     case setPropertyError(OSStatus)
     case graphStartError(OSStatus)
     case graphStopError(OSStatus)
-    case setVolumeError(OSStatus)
+    case setParamError(OSStatus)
 }
 

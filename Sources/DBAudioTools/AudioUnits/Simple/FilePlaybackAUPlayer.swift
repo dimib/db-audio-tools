@@ -24,6 +24,7 @@ public final class FilePlaybackAUPlayer {
     
     private var filePlayerNode: AUNode = 0
     private var defaultOutputNode: AUNode = 0
+    private var mixerNode: AUNode = 0
     
     // MARK: - Lifecycle
     public init(with inputFile: AudioFile) {
@@ -53,7 +54,6 @@ public final class FilePlaybackAUPlayer {
         AUGraphStop(graph)
         try prepareFileInputUnit()
 
-        let status = AUGraphStart(graph)
         try WithCheck(AUGraphStart(graph)) { AudioUnitError.graphStartError($0) }
     }
     
@@ -68,9 +68,9 @@ public final class FilePlaybackAUPlayer {
     public var outputVolume: Float {
         get {
             do {
-                guard let outputUnit = getAudioUnit(of: kAudioUnitType_Output) else { throw AudioUnitError.graphNotInitialized }
+                guard let mixerUnit = getAudioUnit(of: kAudioUnitType_Mixer) else { throw AudioUnitError.graphNotInitialized }
                 var volume: Float = 0
-                try WithCheck(AudioUnitGetParameter(outputUnit, kHALOutputParam_Volume, kAudioUnitScope_Output, 0, &volume)) { AudioUnitError.setVolumeError($0) }
+                try WithCheck(AudioUnitGetParameter(mixerUnit, kStereoMixerParam_Volume, kAudioUnitScope_Output, 0, &volume)) { AudioUnitError.setParamError($0) }
                 return volume
             } catch {
                 return 0
@@ -78,8 +78,29 @@ public final class FilePlaybackAUPlayer {
         }
         set {
             do {
-                guard let outputUnit = getAudioUnit(of: kAudioUnitType_Output) else { throw AudioUnitError.graphNotInitialized }
-                try WithCheck(AudioUnitSetParameter(outputUnit, kHALOutputParam_Volume, kAudioUnitScope_Output, 0, newValue, 0)) { AudioUnitError.setVolumeError($0) }
+                guard let mixerUnit = getAudioUnit(of: kAudioUnitType_Mixer) else { throw AudioUnitError.graphNotInitialized }
+                try WithCheck(AudioUnitSetParameter(mixerUnit, kStereoMixerParam_Volume, kAudioUnitScope_Output, 0, newValue, 0)) { AudioUnitError.setParamError($0) }
+            } catch {
+            }
+        }
+    }
+    
+    public var outputPan: Float {
+        get {
+            do {
+                guard let mixerUnit = getAudioUnit(of: kAudioUnitType_Mixer) else { throw AudioUnitError.graphNotInitialized }
+                var pan: Float = 0
+                try WithCheck(AudioUnitGetParameter(mixerUnit, kStereoMixerParam_Pan, kAudioUnitScope_Output, 0, &pan)) { AudioUnitError.setParamError($0) }
+                return pan
+            } catch {
+                return 0
+            }
+        }
+        
+        set {
+            do {
+                guard let mixerUnit = getAudioUnit(of: kAudioUnitType_Mixer) else { throw AudioUnitError.graphNotInitialized }
+                try WithCheck(AudioUnitSetParameter(mixerUnit, kStereoMixerParam_Pan, kAudioUnitScope_Output, 0, newValue, 0)) { AudioUnitError.setParamError($0) }
             } catch {
             }
         }
@@ -91,9 +112,12 @@ public final class FilePlaybackAUPlayer {
         try WithCheck(NewAUGraph(&graph)) { AudioUnitError.createGraphError($0) }
         guard let graph else { return }
         try addGeneratorNode(graph: graph)
+        try addMixerNode(graph: graph)
         try addOutputNode(graph: graph)
-        try connectNodes(graph: graph, node1: filePlayerNode, node2: defaultOutputNode)
         
+        try connectNodes(graph: graph, node1: filePlayerNode, node2: mixerNode)
+        try connectNodes(graph: graph, node1: mixerNode, node2: defaultOutputNode)
+
         try WithCheck(AUGraphOpen(graph)) { AudioUnitError.graphOpenError($0) }
         try WithCheck(AUGraphInitialize(graph)) { AudioUnitError.graphInitializeError($0) }
     }
@@ -112,7 +136,7 @@ public final class FilePlaybackAUPlayer {
         #if os(macOS)
         let outputSubType = kAudioUnitSubType_DefaultOutput
         #else
-    // https://stackoverflow.com/questions/40257923/how-to-play-a-signal-with-audiounit-ios
+        // https://stackoverflow.com/questions/40257923/how-to-play-a-signal-with-audiounit-ios
         let outputSubType = kAudioUnitSubType_RemoteIO // kAudioUnitSubType_VoiceProcessingIO
         #endif
         var description = AudioComponentDescription(componentType: kAudioUnitType_Output,
@@ -120,6 +144,17 @@ public final class FilePlaybackAUPlayer {
                                                     componentManufacturer: kAudioUnitManufacturer_Apple,
                                                     componentFlags: 0, componentFlagsMask: 0)
         try WithCheck(AUGraphAddNode(graph, &description, &defaultOutputNode)) { AudioUnitError.addGraphNodeError($0) }
+    }
+    
+    private func addMixerNode(graph: AUGraph) throws {
+        
+        #if os(macOS)
+        var description = AudioComponentDescription(componentType: kAudioUnitType_Mixer,
+                                                    componentSubType: kAudioUnitSubType_StereoMixer,
+                                                    componentManufacturer: kAudioUnitManufacturer_Apple,
+                                                    componentFlags: 0, componentFlagsMask: 0)
+        #endif
+        try WithCheck(AUGraphAddNode(graph, &description, &mixerNode)) { AudioUnitError.addGraphNodeError($0) }
         
     }
     
