@@ -102,4 +102,12 @@ public final class Composition {
         guard let graph else { throw AudioUnitError.graphNotInitialized }
         try WithCheck(AUGraphStop(graph)) { AudioUnitError.graphStopError($0) }
     }
+    
+    // MARK: - Audio Units
+    public func audioUnit(for node: AUNode) -> AudioUnit? {
+        guard let graph else { return nil }
+        var audioUnit: AudioUnit?
+        try? WithCheck(AUGraphNodeInfo(graph, node, nil, &audioUnit)) { AudioUnitError.audioUnitNotFound($0) }
+        return audioUnit
+    }
 }

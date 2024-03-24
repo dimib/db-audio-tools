@@ -11,7 +11,7 @@ import AudioToolbox
 public protocol CompositionUnit: AnyObject {
     /// Each `CompositionUnit` needs an `AUNode` to reference it
     var node: AUNode { get }
-    
+
     /// Create the individual `AUNode` depending on what the node should represent.
     func createNode(use composition: Composition) throws
     
@@ -68,5 +68,12 @@ public protocol IntermediateUnit: CompositionUnit {
 
 /// An `EffectUnit` is an `IntermediateUnit` that applies an effect to the audio data.
 public protocol EffectUnit: IntermediateUnit {
+    associatedtype Parameter: EffectParameter
     
+    /// Get all `EffectParameter` values for this effect. Every effect unit has
+    /// its own set of parameters.
+    var parameters: [Parameter] { get }
+    
+    /// Change an effect parameter.
+    func change(parameter: Parameter)
 }

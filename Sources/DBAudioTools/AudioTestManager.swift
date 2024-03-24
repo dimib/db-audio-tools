@@ -180,7 +180,17 @@ public final class AudioTestManager {
                     
                     let composition = Composition(units: [inputUnit, delayUnit, outputUnit])
                     try composition.create()
-                    compositions[resource.0] = composition}
+
+                    debugPrint("1. Delay Unit: \(delayUnit.parameters)")
+                    delayUnit.change(parameter: .delayTime(0.5))
+                    delayUnit.change(parameter: .feedback(50))
+                    delayUnit.change(parameter: .wetDryMix(25))
+                    debugPrint("2. Delay Unit: \(delayUnit.parameters)")
+
+
+                    compositions[resource.0] = composition
+                }
+                
             }
             catch {
                 print("Error: \(error.localizedDescription)")
