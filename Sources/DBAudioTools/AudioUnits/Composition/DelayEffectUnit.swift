@@ -6,8 +6,8 @@ import AudioToolbox
 
 // MARK: - Delay effect parameters
 
-enum DelayEffectParameter: CaseIterable, EffectParameter {
-    static var allCases: [DelayEffectParameter] = [.feedback(0), .delayTime(0), .wetDryMix(0), .lowPassCutoff(0)]
+public enum DelayEffectParameter: CaseIterable, EffectParameter {
+    public static var allCases: [DelayEffectParameter] = [.feedback(0), .delayTime(0), .wetDryMix(0), .lowPassCutoff(0)]
     
     /// Percent, -100->100, 50
     case feedback(Float)
@@ -21,7 +21,7 @@ enum DelayEffectParameter: CaseIterable, EffectParameter {
     /// Hz, 10->(SampleRate/2), 15000
     case lowPassCutoff(Float)
 
-    var parameterId: AudioUnitParameterID {
+    public var parameterId: AudioUnitParameterID {
         switch self {
         case .feedback: kDelayParam_Feedback
         case .delayTime: kDelayParam_DelayTime
@@ -30,32 +30,32 @@ enum DelayEffectParameter: CaseIterable, EffectParameter {
         }
     }
     
-    var scope: AudioUnitScope { kAudioUnitScope_Global }
+    public var scope: AudioUnitScope { kAudioUnitScope_Global }
 }
 
 // MARK: - Delay Effect Unit
 
-final class DelayEffectUnit: EffectUnit {
+public final class DelayEffectUnit: EffectUnit {
     
     // MARK: - Types
-    typealias Parameter = DelayEffectParameter
+    public typealias Parameter = DelayEffectParameter
 
     // MARK: - Intermediate Unit implementation
-    var previousUnit: CompositionUnit?
-    var nextUnit: CompositionUnit?
+    public var previousUnit: CompositionUnit?
+    public var nextUnit: CompositionUnit?
     
     // MARK: - Composition Unit implementation
-    var node: AUNode = AUNode()
+    public private(set) var node: AUNode = AUNode()
     weak var composition: Composition?
 
     // MARK: - Lifecycle
-    init() {
-        
+    public init() {
     }
+
     deinit {
     }
     
-    func createNode(use composition: Composition) throws {
+    public func createNode(use composition: Composition) throws {
         guard let graph = composition.graph else { throw AudioUnitError.graphNotInitialized }
         var description = AudioComponentDescription(componentType: kAudioUnitType_Effect,
                                                     componentSubType: kAudioUnitSubType_Delay,
@@ -65,10 +65,10 @@ final class DelayEffectUnit: EffectUnit {
         self.composition = composition
     }
     
-    func prepare(use composition: Composition) throws {
+    public func prepare(use composition: Composition) throws {
     }
     
-    func cleanup(use composition: Composition) {
+    public func cleanup(use composition: Composition) {
     }
     
     // MARK: - Effect parameters

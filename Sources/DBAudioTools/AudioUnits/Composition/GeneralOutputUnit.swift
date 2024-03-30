@@ -4,24 +4,24 @@
 import Foundation
 import AudioToolbox
 
-final class GeneralOutputUnit: OutputUnit {
+public final class GeneralOutputUnit: OutputUnit {
 
     // MARK: - OutputUnit implementation
-    var node: AUNode = AUNode()
+    public var node: AUNode = AUNode()
     
     // MARK: - Properties
     private var audioUnit: AudioUnit?
     
     // MARK: - Lifecycle
-    init() {
+    public init() {
     }
 
     // MARK: - CompositionUnit implementation
     
-    func prepare(use composition: Composition) throws {
+    public func prepare(use composition: Composition) throws {
     }
 
-    func createNode(use composition: Composition) throws {
+    public func createNode(use composition: Composition) throws {
         guard let graph = composition.graph else { throw AudioUnitError.graphNotInitialized }
         #if os(macOS)
         let outputSubType = kAudioUnitSubType_DefaultOutput
@@ -36,8 +36,8 @@ final class GeneralOutputUnit: OutputUnit {
         try WithCheck(AUGraphAddNode(graph, &description, &node)) { AudioUnitError.addGraphNodeError($0) }
     }
     
-    func cleanup(use composition: Composition) {
+    public func cleanup(use composition: Composition) {
     }
     
-    var previousUnit: CompositionUnit?
+    public var previousUnit: CompositionUnit?
 }

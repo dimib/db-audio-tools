@@ -3,11 +3,12 @@
 
 import Foundation
 import AudioToolbox
+import AVFAudio
 
 /// The `FileInputUnit` provides an audio file as input source.
 ///
 public final class FileInputUnit: InputUnit {
-
+    
     // MARK: - InputUnit implementation
     public var node: AUNode = AUNode()
     public var inputFormat: AudioStreamBasicDescription = AudioStreamBasicDescription()
@@ -16,8 +17,11 @@ public final class FileInputUnit: InputUnit {
     private var inputFile: AudioFile?
     private var audioUnit: AudioUnit?
     
+    // MARK: - FileInputUnit specific
+    public var loops: UInt32 = 0
+    
     // MARK: - Lifecycle
-    init(inputFile: AudioFile) {
+    public init(inputFile: AudioFile) {
         self.inputFile = inputFile
         self.inputFormat = inputFile.fileFormat ?? AudioStreamBasicDescription()
     }
@@ -46,7 +50,7 @@ public final class FileInputUnit: InputUnit {
         var fileAudioUnit: AudioUnit?
         try WithCheck(AUGraphNodeInfo(graph, node, nil, &fileAudioUnit)) { AudioUnitError.audioUnitNotFound($0) }
         guard let fileAudioUnit, var audioId = inputFile.id else { return }
-    
+        
         try WithCheck(AudioUnitSetProperty(fileAudioUnit, kAudioUnitProperty_ScheduledFileIDs, kAudioUnitScope_Global, 0,
                                            &audioId, AudioFileID.size32)) { AudioUnitError.setPropertyError($0) }
         
@@ -55,7 +59,7 @@ public final class FileInputUnit: InputUnit {
         let regionTimeStamp = AudioTimeStamp(mSampleTime: 0, mHostTime: 0, mRateScalar: 0, mWordClockTime: 0, mSMPTETime: SMPTETime(),
                                              mFlags: .sampleTimeValid, mReserved: 0)
         var region = ScheduledAudioFileRegion(mTimeStamp: regionTimeStamp, mCompletionProc: nil, mCompletionProcUserData: nil,
-                                              mAudioFile: audioFile, mLoopCount: 0, mStartFrame: 0, mFramesToPlay: framesToPlay)
+                                              mAudioFile: audioFile, mLoopCount: loops, mStartFrame: 0, mFramesToPlay: framesToPlay)
         try WithCheck(AudioUnitSetProperty(fileAudioUnit, kAudioUnitProperty_ScheduledFileRegion, kAudioUnitScope_Global, 0,
                                            &region, ScheduledAudioFileRegion.size32)) { AudioUnitError.setPropertyError($0) }
         
@@ -70,7 +74,7 @@ public final class FileInputUnit: InputUnit {
         debugPrint("🎹 just for info: estimated=\(estimatedDuration) duration=\(durationInSeconds)")
         self.audioUnit = fileAudioUnit
     }
-
+    
     public var nextUnit: CompositionUnit?
 }
 

@@ -70,7 +70,7 @@ public final class FilePlaybackAUPlayer {
             do {
                 guard let mixerUnit = getAudioUnit(of: kAudioUnitType_Mixer) else { throw AudioUnitError.graphNotInitialized }
                 var volume: Float = 0
-                try WithCheck(AudioUnitGetParameter(mixerUnit, kStereoMixerParam_Volume, kAudioUnitScope_Output, 0, &volume)) { AudioUnitError.setParamError($0) }
+                try WithCheck(AudioUnitGetParameter(mixerUnit, kMatrixMixerParam_Volume, kAudioUnitScope_Output, 0, &volume)) { AudioUnitError.setParamError($0) }
                 return volume
             } catch {
                 return 0
@@ -79,7 +79,7 @@ public final class FilePlaybackAUPlayer {
         set {
             do {
                 guard let mixerUnit = getAudioUnit(of: kAudioUnitType_Mixer) else { throw AudioUnitError.graphNotInitialized }
-                try WithCheck(AudioUnitSetParameter(mixerUnit, kStereoMixerParam_Volume, kAudioUnitScope_Output, 0, newValue, 0)) { AudioUnitError.setParamError($0) }
+                try WithCheck(AudioUnitSetParameter(mixerUnit, kMatrixMixerParam_Volume, kAudioUnitScope_Output, 0, newValue, 0)) { AudioUnitError.setParamError($0) }
             } catch {
             }
         }
@@ -90,7 +90,7 @@ public final class FilePlaybackAUPlayer {
             do {
                 guard let mixerUnit = getAudioUnit(of: kAudioUnitType_Mixer) else { throw AudioUnitError.graphNotInitialized }
                 var pan: Float = 0
-                try WithCheck(AudioUnitGetParameter(mixerUnit, kStereoMixerParam_Pan, kAudioUnitScope_Output, 0, &pan)) { AudioUnitError.setParamError($0) }
+                try WithCheck(AudioUnitGetParameter(mixerUnit, kMatrixMixerParam_Volume, kAudioUnitScope_Output, 0, &pan)) { AudioUnitError.setParamError($0) }
                 return pan
             } catch {
                 return 0
@@ -100,7 +100,7 @@ public final class FilePlaybackAUPlayer {
         set {
             do {
                 guard let mixerUnit = getAudioUnit(of: kAudioUnitType_Mixer) else { throw AudioUnitError.graphNotInitialized }
-                try WithCheck(AudioUnitSetParameter(mixerUnit, kStereoMixerParam_Pan, kAudioUnitScope_Output, 0, newValue, 0)) { AudioUnitError.setParamError($0) }
+                try WithCheck(AudioUnitSetParameter(mixerUnit, kMatrixMixerParam_Volume, kAudioUnitScope_Output, 0, newValue, 0)) { AudioUnitError.setParamError($0) }
             } catch {
             }
         }
@@ -150,12 +150,11 @@ public final class FilePlaybackAUPlayer {
         
         #if os(macOS)
         var description = AudioComponentDescription(componentType: kAudioUnitType_Mixer,
-                                                    componentSubType: kAudioUnitSubType_StereoMixer,
+                                                    componentSubType: kAudioUnitSubType_MatrixMixer,
                                                     componentManufacturer: kAudioUnitManufacturer_Apple,
                                                     componentFlags: 0, componentFlagsMask: 0)
-        #endif
         try WithCheck(AUGraphAddNode(graph, &description, &mixerNode)) { AudioUnitError.addGraphNodeError($0) }
-        
+        #endif
     }
     
     // MARK: - Finding nodes

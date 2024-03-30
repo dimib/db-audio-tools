@@ -35,6 +35,8 @@ public protocol InputUnit: CompositionUnit {
 
     /// Specifies the input format description for the whole composition.
     var inputFormat: AudioStreamBasicDescription { get }
+    
+    var loops: UInt32 { get set }
 }
 
 // MARK: - Output Unit

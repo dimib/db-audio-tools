@@ -12,13 +12,13 @@ public final class Composition {
     private(set) var graph: AUGraph?
     
     // MARK: - Properties
-    private var units: [CompositionUnit]
+    public private(set) var units: [CompositionUnit]
     
     /// The esitmated duration.
     private var durationInSeconds: Float64?
     
     // MARK: - Lifecycle
-    init(units: [CompositionUnit]) {
+    public init(units: [CompositionUnit]) {
         self.units = units
     }
     
@@ -28,13 +28,15 @@ public final class Composition {
                 unit.cleanup(use: self)
             }
             
+            AUGraphRemoveRenderNotify(graph, renderNotificationCallback, nil)
+            
             AUGraphClose(graph)
             DisposeAUGraph(graph)
         }
     }
 
     /// Creates the `AUGraph`, prepares and connects all `CompositionUnit`.
-    func create() throws {
+    public func create() throws {
         try WithCheck(NewAUGraph(&graph)) { AudioUnitError.createGraphError($0) }
         guard let graph else { return }
 
@@ -51,6 +53,8 @@ public final class Composition {
                 try connectWithNextUnit(graph: graph, unit: intermediateUnit)
             }
         }
+        
+        try WithCheck(AUGraphAddRenderNotify(graph, renderNotificationCallback, nil)) { AudioUnitError.graphInitializeError($0) }
         
         try WithCheck(AUGraphOpen(graph)) { AudioUnitError.graphOpenError($0) }
         try WithCheck(AUGraphInitialize(graph)) { AudioUnitError.graphInitializeError($0) }
@@ -93,7 +97,6 @@ public final class Composition {
         AUGraphStop(graph)
 
         try prepare()
-        let status = AUGraphStart(graph)
         try WithCheck(AUGraphStart(graph)) { AudioUnitError.graphStartError($0) }
     }
     
@@ -109,5 +112,20 @@ public final class Composition {
         var audioUnit: AudioUnit?
         try? WithCheck(AUGraphNodeInfo(graph, node, nil, &audioUnit)) { AudioUnitError.audioUnitNotFound($0) }
         return audioUnit
+    }
+    
+    // MARK: - Status
+    public var isPlaying: Bool {
+        guard let graph else { return false }
+        var isPlaying: DarwinBoolean = false
+        AUGraphIsRunning(graph, &isPlaying)
+        debugPrint("🎹 isPlaying=\(isPlaying.boolValue)")
+        return isPlaying.boolValue
+    }
+    
+    // MARK: - Render Info Callback
+    private var renderNotificationCallback: AURenderCallback = { (inRefCon, ioActionFlags, inTimeStamp, inBusNumber, inNumberFrames, ioData) in
+        debugPrint("🎹 renderNotification \(inTimeStamp)")
+        return 0
     }
 }
